@@ -18,7 +18,7 @@ namespace LR4
             {
                 double range = 6.0 - 0.0;   // Диапазон е.в. от 0 до 6
                 double sample = _random.NextDouble();
-                double scaled = (sample * range) + float.MinValue;
+                double scaled = (sample * range) + 0.0;
 
                 return (float)scaled;
             }

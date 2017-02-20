@@ -54,17 +54,17 @@ namespace LR4
 
             foreach (var queue in _queues)
             {
-                Task.Run(() => ServeQueueAsync(queue));
+                var task = Task.Run(() => ServeQueueAsync(queue));
+                _tasks.Add(task);
             }
 
-            // запустить таймер времени
-            throw new NotImplementedException();
+            Task.WaitAll(_tasks.ToArray());
         }
 
         // Заканчивает обслуживание.
         public void Stop()
         {
-            // остановить задачи и глобальный таймер
+            // остановить задачи выше
             throw new NotImplementedException();
         }
 
