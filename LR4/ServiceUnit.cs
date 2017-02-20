@@ -4,8 +4,7 @@ using System.Threading.Tasks;
 using static LR4.Applications;
 
 /*
-Выдавать после обслуживания каждых 100 заявок информацию о текущей
-и средней длине очереди. В конце процесса выдать общее время моделирования
+В конце процесса выдать общее время моделирования
 и количество вошедших в систему и вышедших из нее заявок, среднее время
 пребывания заявки в очереди, время простоя аппарата, количество срабатываний
 ОА.
@@ -20,6 +19,7 @@ namespace LR4
 
         private List<IQueue<float>> _queues;    // Обслуживаемые очереди
         // задачи, выполняющие очереди
+        // таймер для общего времени
         // ...
 
         private const int _TimeFactor = 100;   // Скорость симуляции
@@ -27,16 +27,22 @@ namespace LR4
         private ServiceUnit()
         {
             _queues = new List<IQueue<float>>();
+
+            TimeSinceStart = 0.0f;
+            ServedApplicationsCount = 0;
         }
 
         public static ServiceUnit Instance => _instance ?? (_instance = new ServiceUnit());
 
 
-        // Общее время выполнения
+        // Общее время выполнения.
         public float TimeSinceStart { get; private set; }
 
-        // Счётчик обслуженных заявок
+        // Счётчик вышедших заявок.
         public int ServedApplicationsCount { get; private set; }
+
+        // Счётчик вошедших заявок.
+        public int ApplicationsCount { get; private set; }
 
         // Добавляет очередь на обслуживание.
         public void AddQueue(IQueue<float> queue)
@@ -55,6 +61,7 @@ namespace LR4
                 Task.Run(() => ServeQueueAsync(queue));
             }
 
+            // запустить таймер времени
             throw new NotImplementedException();
         }
 
@@ -82,20 +89,26 @@ namespace LR4
         private async Task AcceptApplicationAsync(IQueue<float> queue, float timeUnits)
         {
             await WorkAsync(timeUnits);
-
-            queue.Enqueue(Application);
+            queue.Enqueue(Application); // добавить в счетчик всех заявок
+            throw new NotImplementedException();
         }
 
         // Обслуживает одну заявку.
         private async Task ServeApplicationAsync(IQueue<float> queue, float timeUnits)
         {
             await WorkAsync(timeUnits);
-
             queue.Dequeue();
+
+            if (++ServedApplicationsCount % 100 == 0)
+            {
+                Console.WriteLine(); // информация о текущей и средней длине очереди.
+                throw new NotImplementedException();
+            }
 
             if (!ShouldReapply) return;
 
-            queue.Enqueue(Application);
+            queue.Enqueue(Application); // ?добавить в счетчик всех заявок
+            throw new NotImplementedException();
         }
 
         // Симулирует работу.
