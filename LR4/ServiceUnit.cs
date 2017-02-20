@@ -3,11 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using static LR4.Applications;
 
-/*
-Осталось добавить: среднее время пребывания
-заявки в очереди, количество срабатываний ОА.
-*/
-
 namespace LR4
 {
     // Обслуживающий аппарат. Использует шаблон проектирования Singleton.
@@ -42,6 +37,9 @@ namespace LR4
 
         // Счётчик вошедших заявок.
         public int ApplicationsCount { get; private set; }
+
+        // Среднее время пребывания заявки в очереди.
+        public float AverageServingTime { get; private set; }
 
         // Добавляет очередь на обслуживание.
         public void AddQueue(IQueue<float> queue)
@@ -85,7 +83,7 @@ namespace LR4
         // Принимает одну заявку.
         private async Task AcceptApplicationAsync(IQueue<float> queue, float timeUnits)
         {
-            await WorkAsync(timeUnits); // добавить в общее время простоя, учесть _TimeFactor
+            await WorkAsync(NormalizeTime(timeUnits)); // добавить в общее время простоя
             queue.Enqueue(Application); // добавить в счетчик всех заявок
             throw new NotImplementedException();
         }
@@ -93,7 +91,7 @@ namespace LR4
         // Обслуживает одну заявку.
         private async Task ServeApplicationAsync(IQueue<float> queue, float timeUnits)
         {
-            await WorkAsync(timeUnits);
+            await WorkAsync(NormalizeTime(timeUnits)); // добавить в общее время заявок
             queue.Dequeue();
 
             if (++ServedApplicationsCount % _LogRate == 0)
@@ -109,11 +107,16 @@ namespace LR4
         }
 
         // Симулирует работу.
-        private async Task WorkAsync(float timeUnits)
+        private async Task WorkAsync(int millisecondsWork)
+        {
+            await Task.Delay(millisecondsWork);
+        }
+
+        // Преобразует единицы времени во время.
+        private int NormalizeTime(float timeUnits)
         {
             float time = timeUnits * _TimeFactor;
-
-            await Task.Delay((int) Math.Round(time));
+            return (int) Math.Round(time);
         }
     }
 }
