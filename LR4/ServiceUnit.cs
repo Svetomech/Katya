@@ -24,7 +24,10 @@ namespace LR4
 
         private const int _TimeFactor = 100;   // Скорость симуляции
 
-        private ServiceUnit() { }
+        private ServiceUnit()
+        {
+            _queues = new List<IQueue<float>>();
+        }
 
         public static ServiceUnit Instance => _instance ?? (_instance = new ServiceUnit());
 
