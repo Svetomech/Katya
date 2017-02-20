@@ -28,9 +28,6 @@ namespace LR4
         public static ServiceUnit Instance => _instance ?? (_instance = new ServiceUnit());
 
 
-        // Общее время выполнения.
-        public float TimeSinceStart { get; private set; }
-
         // Общее время простоя.
         public float TimeSpentIdle { get; private set; }
 
@@ -42,9 +39,6 @@ namespace LR4
 
         // Счётчик вошедших заявок.
         public int ApplicationsCount { get; private set; }
-
-        // Среднее время пребывания заявки в очереди.
-        public float AverageServingTime { get; private set; }
 
         // Добавляет очередь на обслуживание.
         public void AddQueue(IQueue<float> queue)
