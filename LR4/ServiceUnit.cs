@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using static LR4.Applications;
 
@@ -10,17 +11,18 @@ namespace LR4
     {
         private static ServiceUnit _instance;
 
-        private List<IQueue<float>> _queues;    // Обслуживаемые очереди
-        // задачи, выполняющие очереди
-        // таймер для времени выполнения
-        // таймер для времени простоя
+        private List<IQueue<float>> _queues;     // Обслуживаемые очереди
+        private List<int> _servedQueuesCounts;   // Кол-во обслуженных очередей
+        private List<Task> _tasks;               // Задачи, выполняющие очереди
 
-        private const int _TimeFactor = 10;   // Скорость симуляции, [1;1000] (меньше - лучше)
+        private const int _TimeFactor = 10;   // Скорость симуляции, [1;1000] (меньше - лучше)                                                !!!value
         private const int _LogRate = 100;     // Частота информации, [1;1000] (больше - лучше)
 
         private ServiceUnit()
         {
             _queues = new List<IQueue<float>>();
+            _servedQueuesCounts = new List<int>();
+            _tasks = new List<Task>();
         }
 
         public static ServiceUnit Instance => _instance ?? (_instance = new ServiceUnit());
@@ -31,6 +33,9 @@ namespace LR4
 
         // Общее время простоя.
         public float TimeSpentIdle { get; private set; }
+
+        // Общее время обслуживания.
+        public float TimeSpentWorking { get; private set; }
 
         // Счётчик вышедших заявок.
         public int ServedApplicationsCount { get; private set; }
@@ -70,40 +75,47 @@ namespace LR4
         }
 
 
-        // Обслуживает очередь заявок.
+        // Работает с очередью заявок.
         private async Task ServeQueueAsync(IQueue<float> queue)
         {
             var acceptTask = AcceptApplicationAsync(queue, NextApplication);
             var serveTask = ServeApplicationAsync(queue, Application);
 
-            // дождаться результатов задач
-            throw new NotImplementedException();
+            await acceptTask;
+            await serveTask;
         }
 
         // Принимает одну заявку.
         private async Task AcceptApplicationAsync(IQueue<float> queue, float timeUnits)
         {
-            await WorkAsync(NormalizeTime(timeUnits)); // добавить в общее время простоя
-            queue.Enqueue(Application); // добавить в счетчик всех заявок
-            throw new NotImplementedException();
+            int time = NormalizeTime(timeUnits);
+
+            TimeSpentIdle += time;
+            await WorkAsync(time);
+
+            queue.Enqueue(Application);
+            ApplicationsCount++;
         }
 
         // Обслуживает одну заявку.
         private async Task ServeApplicationAsync(IQueue<float> queue, float timeUnits)
         {
-            await WorkAsync(NormalizeTime(timeUnits)); // добавить в общее время заявок
+            int time = NormalizeTime(timeUnits);
+
+            TimeSpentWorking += time;
+            await WorkAsync(time);
+
             queue.Dequeue();
 
             if (++ServedApplicationsCount % _LogRate == 0)
             {
-                Console.WriteLine(); // информация о текущей и средней длине очереди.
-                throw new NotImplementedException();
+                PrintLog(queue);
             }
 
             if (!ShouldReapply) return;
 
-            queue.Enqueue(Application); // ?добавить в счетчик всех заявок
-            throw new NotImplementedException();
+            queue.Enqueue(Application);
+            ApplicationsCount++;      // Считать ли вернувшуюся заявку?
         }
 
         // Симулирует работу.
@@ -117,6 +129,17 @@ namespace LR4
         {
             float time = timeUnits * _TimeFactor;
             return (int) Math.Round(time);
+        }
+
+        // Выводит отладочную информацию.                                                                                                !!!filler
+        private void PrintLog(IQueue<float> queue)
+        {
+            char filler = '*';
+
+            Console.WriteLine(new string(filler, Console.WindowWidth));
+            Console.WriteLine($"Текущая длина очереди: {queue.Count}");
+            Console.WriteLine($"Средняя длина очереди: {_servedQueuesCounts.Average()}");
+            Console.WriteLine(new string(filler, Console.WindowWidth));
         }
     }
 }
