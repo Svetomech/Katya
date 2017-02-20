@@ -4,10 +4,8 @@ using System.Threading.Tasks;
 using static LR4.Applications;
 
 /*
-В конце процесса выдать общее время моделирования
-и количество вошедших в систему и вышедших из нее заявок, среднее время
-пребывания заявки в очереди, время простоя аппарата, количество срабатываний
-ОА.
+Осталось добавить: среднее время пребывания
+заявки в очереди, количество срабатываний ОА.
 */
 
 namespace LR4
@@ -19,17 +17,15 @@ namespace LR4
 
         private List<IQueue<float>> _queues;    // Обслуживаемые очереди
         // задачи, выполняющие очереди
-        // таймер для общего времени
-        // ...
+        // таймер для времени выполнения
+        // таймер для времени простоя
 
-        private const int _TimeFactor = 100;   // Скорость симуляции
+        private const int _TimeFactor = 10;   // Скорость симуляции, [1;1000] (меньше - лучше)
+        private const int _LogRate = 100;     // Частота информации, [1;1000] (больше - лучше)
 
         private ServiceUnit()
         {
             _queues = new List<IQueue<float>>();
-
-            TimeSinceStart = 0.0f;
-            ServedApplicationsCount = 0;
         }
 
         public static ServiceUnit Instance => _instance ?? (_instance = new ServiceUnit());
@@ -37,6 +33,9 @@ namespace LR4
 
         // Общее время выполнения.
         public float TimeSinceStart { get; private set; }
+
+        // Общее время простоя.
+        public float TimeSpentIdle { get; private set; }
 
         // Счётчик вышедших заявок.
         public int ServedApplicationsCount { get; private set; }
@@ -54,7 +53,7 @@ namespace LR4
         public void Start()
         {
             if (_queues.Count == 0)
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Нечего обслуживать");
 
             foreach (var queue in _queues)
             {
@@ -68,6 +67,7 @@ namespace LR4
         // Заканчивает обслуживание.
         public void Stop()
         {
+            // остановить задачи и глобальный таймер
             throw new NotImplementedException();
         }
 
@@ -78,17 +78,14 @@ namespace LR4
             var acceptTask = AcceptApplicationAsync(queue, NextApplication);
             var serveTask = ServeApplicationAsync(queue, Application);
 
-            // вывод промежуточных результатов
-
             // дождаться результатов задач
-
             throw new NotImplementedException();
         }
 
         // Принимает одну заявку.
         private async Task AcceptApplicationAsync(IQueue<float> queue, float timeUnits)
         {
-            await WorkAsync(timeUnits);
+            await WorkAsync(timeUnits); // добавить в общее время простоя, учесть _TimeFactor
             queue.Enqueue(Application); // добавить в счетчик всех заявок
             throw new NotImplementedException();
         }
@@ -99,7 +96,7 @@ namespace LR4
             await WorkAsync(timeUnits);
             queue.Dequeue();
 
-            if (++ServedApplicationsCount % 100 == 0)
+            if (++ServedApplicationsCount % _LogRate == 0)
             {
                 Console.WriteLine(); // информация о текущей и средней длине очереди.
                 throw new NotImplementedException();
