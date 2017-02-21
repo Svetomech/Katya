@@ -1,8 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using static LR4.Applications;
+
+/*
+ref-ки для очереди, LongRunning для задач
+*/
 
 namespace LR4
 {
@@ -15,7 +20,7 @@ namespace LR4
         private List<int> _servedQueuesCounts;   // Кол-во обслуженных очередей
         private List<Task> _tasks;               // Задачи, выполняющие очереди
 
-        private const int _TimeFactor = 10;   // Скорость симуляции, [1;1000] (меньше - лучше)                                                !!!value
+        private const int _TimeFactor = 10;   // Скорость симуляции, [1;1000] (меньше - лучше)
         private const int _LogRate = 100;     // Частота информации, [1;1000] (больше - лучше)
 
         private ServiceUnit()
@@ -54,52 +59,46 @@ namespace LR4
 
             foreach (var queue in _queues)
             {
-                var task = Task.Run(() => ServeQueueAsync(queue));
+                var task = Task.Run(() => ServeQueueForever(queue));
                 _tasks.Add(task);
             }
 
             Task.WaitAll(_tasks.ToArray());
         }
 
-        // Заканчивает обслуживание.
-        public void Stop()
-        {
-            // остановить задачи выше
-            throw new NotImplementedException();
-        }
-
 
         // Работает с очередью заявок.
-        private async Task ServeQueueAsync(IQueue<float> queue)
+        private void ServeQueueForever(IQueue<float> queue)
         {
-            var acceptTask = AcceptApplicationAsync(queue, NextApplication);
-            var serveTask = ServeApplicationAsync(queue, Application);
-
-            await acceptTask;
-            await serveTask;
+            for (;;)
+            {
+                AcceptApplication(queue, NextApplication);
+                ServeApplication(queue, Application);
+            }
         }
 
         // Принимает одну заявку.
-        private async Task AcceptApplicationAsync(IQueue<float> queue, float timeUnits)
+        private void AcceptApplication(IQueue<float> queue, float timeUnits)
         {
             int time = NormalizeTime(timeUnits);
 
+            Work(time);
             TimeSpentIdle += time;
-            await WorkAsync(time);
 
             queue.Enqueue(Application);
             ApplicationsCount++;
         }
 
         // Обслуживает одну заявку.
-        private async Task ServeApplicationAsync(IQueue<float> queue, float timeUnits)
+        private void ServeApplication(IQueue<float> queue, float timeUnits)
         {
             int time = NormalizeTime(timeUnits);
 
+            Work(time);
             TimeSpentWorking += time;
-            await WorkAsync(time);
 
             queue.Dequeue();
+            _servedQueuesCounts.Add(queue.Count);
 
             if (++ServedApplicationsCount % _LogRate == 0)
             {
@@ -113,9 +112,9 @@ namespace LR4
         }
 
         // Симулирует работу.
-        private async Task WorkAsync(int millisecondsWork)
+        private void Work(int millisecondsWork)
         {
-            await Task.Delay(millisecondsWork);
+            Thread.Sleep(millisecondsWork);
         }
 
         // Преобразует единицы времени во время.
@@ -125,14 +124,21 @@ namespace LR4
             return (int) Math.Round(time);
         }
 
-        // Выводит отладочную информацию.                                                                                                !!!filler
+        // Выводит отладочную информацию.
         private void PrintLog(IQueue<float> queue)
         {
-            char filler = '*';
+            char filler = '=';
 
-            Console.WriteLine(new string(filler, Console.WindowWidth));
+            Console.WriteLine(queue is ArrayQueue<float> ? "Очередь-массив" : "Очередь-список");
+            Console.Write(new string(filler, Console.WindowWidth));
             Console.WriteLine($"Текущая длина очереди: {queue.Count}");
             Console.WriteLine($"Средняя длина очереди: {_servedQueuesCounts.Average()}");
+
+            Console.WriteLine($"{nameof(ServedApplicationsCount)}: {ServedApplicationsCount}");
+            Console.WriteLine($"{nameof(ApplicationsCount)}: {ApplicationsCount}");
+            Console.WriteLine($"{nameof(TimeSpentWorking)}: {TimeSpentWorking}");
+            Console.WriteLine($"{nameof(TimeSpentIdle)}: {TimeSpentIdle}");
+
             Console.WriteLine(new string(filler, Console.WindowWidth));
         }
     }
